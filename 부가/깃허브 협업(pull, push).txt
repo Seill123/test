@@ -1,0 +1,33 @@
+개인 깃허브 파일 올리는 법
+올리고 싶은 원격 폴더 -> 마우스 오른쪽 -> 추가 옵션 -> brach Bash here
+git init  : 로컬 저장소 만들기 (1번만 함)
+git remote add 주소이름(띄고)원격 저장소 주소(git hub 레퍼토리지 코드에 주소) : 저장소 연결
+git brach -m 브랜치 명 : 브랜치 명 바꾸기
+git add . : 내 로컬 폴더의 모든 파일 업로드
+git status : 로컬 저장소에 변경된 파일이 뭐가 있는지 확인하기
+git commit -m "커밋 메시지" : 커밋할 때는 커밋 메시지를 써줘야함 (지금 플레이팅 까지 완료)
+git push : 이제 깃허브 레퍼토리지에 업로드 (서빙)
+
+팀 깃허브 파일 업로드
+git clone 팀에서 생성한 나의 fork 주소 : 접속
+git remote add upstream https://github.com/TheSoftBelly/CapstonProject.git
+git pull upstream develop
+git flow feature start Back-end
+git add .
+git commit -m "Back-end 수정"
+git flow feature finish Back-end
+git push -u origin develop
+깃허브 레퍼토리지에서 pull request 해야함
+경로 develop, develop
+파일 다운
+git pull upstream develop
+
+git flow feature start Back-end
+git add "My Topic.txt"
+$ git commit -m "주제 정리"
+[feature/Back-end 7d98749] 주제 정리
+ 1 file changed, 36 insertions(+)
+ create mode 100644 My Topic.txt
+$ git flow feature finish Back-end
+$ git push -u origin develop
+$ git pull upstream
