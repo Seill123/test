@@ -1,8 +1,13 @@
+import 'package:capstone_proj/widgets/ProgressBar.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'email_verification_screen.dart';
+import 'package:capstone_proj/screens/onboarding/password_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:capstone_proj/providers/sign_up_provider.dart';
 
 class SignUpScreen extends StatefulWidget {
+  final int currentStep; // 현재 회원가입 단계
+
+  SignUpScreen({this.currentStep = 2});
   @override
   _SignUpScreenState createState() => _SignUpScreenState();
 }
@@ -26,7 +31,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   void _validateEmail() {
     String email = _emailController.text;
-    bool isValid = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\$')
+    bool isValid = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
         .hasMatch(email);
 
     setState(() {
@@ -35,34 +40,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
   }
 
-  void _sendVerificationEmail() async {
-    try {
-      await FirebaseAuth.instance.sendSignInLinkToEmail(
-        email: _emailController.text,
-        actionCodeSettings: ActionCodeSettings(
-          url: "https://capstoneproj.page.link",
-          handleCodeInApp: true,
-          androidPackageName: "com.example.capstone_proj",
-          androidInstallApp: true,
-          androidMinimumVersion: "21",
-          iOSBundleId: "com.example.capstoneProj",
-        ),
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("인증 이메일을 보냈어요! 이메일을 확인해주세요.")),
-      );
+  /// 🔥 이메일 입력 후 PasswordScreen으로 이동
+  void _goToPasswordScreen() {
+    if (_isEmailEntered && _isEmailValid) {
+      final signUpProvider =
+          Provider.of<SignUpProvider>(context, listen: false);
+      signUpProvider.updateUserData(email: _emailController.text);
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) =>
-              EmailVerificationScreen(email: _emailController.text),
+          builder: (context) => PasswordScreen(),
         ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("이메일 전송 실패: \${e.toString()}")),
       );
     }
   }
@@ -88,6 +77,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            ProgressBar(progress: widget.currentStep / 10),
             Text(
               "로그인에 사용할 \n이메일을 알려주세요.",
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -118,9 +108,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: isButtonEnabled ? _sendVerificationEmail : null,
+                  onPressed: isButtonEnabled ? _goToPasswordScreen : null,
                   child: Text(
-                    '이메일 인증하기',
+                    '다음',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(

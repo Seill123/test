@@ -1,5 +1,9 @@
+import 'package:capstone_proj/screens/ChatScreen.dart';
 import 'package:capstone_proj/screens/FeedScreen.dart';
+import 'package:capstone_proj/screens/MapScreen.dart';
+import 'package:capstone_proj/screens/NotificationScreen.dart';
 import 'package:capstone_proj/screens/ScheduleScreen.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_proj/screens/UploadScreen.dart';
 import 'package:capstone_proj/screens/MyPageScreen.dart';
@@ -29,10 +33,10 @@ class _MainScreenState extends State<MainScreen>
 
   // 각 탭에 해당하는 화면
   final List<Widget> _screens = [
-    Center(child: Text('홈 화면')), // TabBar 적용
-    Center(child: Text('채팅 화면')),
+    Feedscreen(), // TabBar 적용
+    ChatScreen(),
     UploadScreen(), // UploadScreen은 Navigator로 푸시
-    Center(child: Text('지도 화면')),
+    MapScreen(),
     Mypagescreen(),
   ];
 
@@ -52,6 +56,9 @@ class _MainScreenState extends State<MainScreen>
       );
     } else {
       setState(() {
+        if (index == 0) {
+          _tabController.index = 0; // ✅ 홈 버튼을 누르면 "추천" 탭으로 초기화
+        }
         _selectedIndex = index;
       });
     }
@@ -63,6 +70,7 @@ class _MainScreenState extends State<MainScreen>
       backgroundColor: Colors.white,
       appBar: _selectedIndex == 0
           ? AppBar(
+              automaticallyImplyLeading: false,
               backgroundColor: Colors.white,
               title: Image.asset(
                 'assets/applogo.png',
@@ -89,23 +97,29 @@ class _MainScreenState extends State<MainScreen>
               actions: _selectedIndex == 0
                   ? [
                       IconButton(
-                        icon: Icon(Icons.person_add),
+                        icon: Icon(Icons.person_add_alt,
+                            size: 28, color: Color(0xFF474747)),
                         onPressed: () {
                           // 프로필 버튼 동작
                         },
                       ),
                       IconButton(
-                        icon: Icon(Icons.search),
+                        icon: Icon(Icons.search,
+                            size: 28, color: Color(0xFF474747)),
                         onPressed: () {
                           // 검색 버튼 동작
                         },
                       ),
                       IconButton(
-                        icon: Icon(Icons.notifications),
-                        onPressed: () {
-                          // 알림 버튼 동작
-                        },
-                      ),
+                          icon: Icon(Icons.notifications_none,
+                              size: 28, color: Color(0xFF474747)),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => NotificationScreen()),
+                            );
+                          }),
                     ]
                   : null,
               elevation: 0,
@@ -116,7 +130,7 @@ class _MainScreenState extends State<MainScreen>
                       controller: _tabController,
                       labelColor: Color(0xFF424242),
                       unselectedLabelColor: Colors.grey,
-                      indicatorColor: Colors.black,
+                      indicatorColor: Color(0xFF474747),
                       indicatorSize: TabBarIndicatorSize.tab,
                       splashFactory: NoSplash.splashFactory,
                       overlayColor: WidgetStateProperty.all(Colors.transparent),
@@ -170,7 +184,7 @@ class _MainScreenState extends State<MainScreen>
             label: '홈',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.chat),
+            icon: Icon(CupertinoIcons.ellipses_bubble_fill),
             label: '채팅',
           ),
           BottomNavigationBarItem(

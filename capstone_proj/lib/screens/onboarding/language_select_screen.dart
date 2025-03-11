@@ -1,13 +1,8 @@
-import 'package:capstone_proj/screens/onboarding/keyword_selection_screen.dart';
+/*import 'package:capstone_proj/screens/onboarding/keyword_selection_screen.dart';
 import 'package:capstone_proj/screens/onboarding/language_add_screen.dart';
 import 'package:flutter/material.dart';
 
 class LanguageSelectionScreen extends StatefulWidget {
-  final String email;
-  final String password;
-
-  LanguageSelectionScreen({required this.email, required this.password});
-
   @override
   _LanguageSelectionScreenState createState() =>
       _LanguageSelectionScreenState();
@@ -155,10 +150,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => KeywordSelectionScreen(
-                                      email: widget.email,
-                                      password: widget.password,
-                                    )),
+                                builder: (context) => KeywordSelectionScreen()),
                           );
                         }
                       : null, // 비활성화
@@ -183,4 +175,4 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
       ),
     );
   }
-}
+}*/

@@ -1,7 +1,10 @@
+import 'package:capstone_proj/screens/FollowersFollowingScreen.dart';
+import 'package:capstone_proj/screens/mypage/ProfileEditScreen.dart';
 import 'package:capstone_proj/screens/mypage/SettingsScreen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_proj/models/user_model.dart';
-import 'package:capstone_proj/screens/FollowersFollowingScreen.dart';
 import 'package:capstone_proj/screens/mypage/feed_tab.dart';
 import 'package:capstone_proj/screens/mypage/profile_tab.dart';
 import 'package:capstone_proj/screens/mypage/schedule_tab.dart';
@@ -15,53 +18,83 @@ class Mypagescreen extends StatefulWidget {
 
 class _MypagescreenState extends State<Mypagescreen> {
   bool showFullText = false; // 더보기 버튼 상태를 저장하는 변수
+  UserModel? user; // Firestore에서 가져올 사용자 데이터
+  bool isLoading = true; // 로딩 상태
 
-  // 🔥 더미 데이터: 실제 앱에서는 API 또는 DB에서 가져오는 데이터
-  final UserModel user = UserModel(
-    userName: "taehwan", // 사용자 이름
-    userId: "@hyeontaehwan", // 사용자 아이디
-    bio: "나를 소개해보세요.", // 사용자 소개
-    followers: 20, // 팔로워 수
-    following: 8, // 팔로잉 수
-    profileImageUrl: null, // 프로필 이미지 URL (기본 이미지 사용 가능)
-  );
-
-  // 팔로워/팔로잉 화면으로 이동하는 함수
-  void _navigateToFollowersFollowing(
-      BuildContext context, UserModel user, String type) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            FollowersFollowingScreen(user: user, type: type), // ✅ type 파라미터 추가
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    fetchUserProfile(); // 사용자 프로필 데이터 가져오기
   }
 
-  // 통계 항목(팔로워, 팔로잉)을 표시하는 위젯
+  // Firestore에서 사용자 프로필 정보 가져오는 함수
+  Future<void> fetchUserProfile() async {
+    final firestore = FirebaseFirestore.instance;
+    User? currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) return;
+
+    String UID = currentUser.uid;
+
+    try {
+      // users 컬렉션에서 데이터 가져오기
+      DocumentSnapshot userDoc =
+          await firestore.collection('users').doc(UID).get();
+      DocumentSnapshot profileDoc =
+          await firestore.collection('user_profile').doc(UID).get();
+
+      if (userDoc.exists && profileDoc.exists) {
+        var userData = userDoc.data() as Map<String, dynamic>;
+        var profileData = profileDoc.data() as Map<String, dynamic>;
+
+        setState(() {
+          user = UserModel(
+            userName: userData['user_name'] ?? "Unknown",
+            userId: "@${userData['user_id'] ?? "unknown"}",
+            bio: (profileData['bio'] == null ||
+                    profileData['bio'].trim().isEmpty)
+                ? "자기소개를 입력해주세요."
+                : profileData['bio'],
+            followers: (profileData['followers'] as List?)?.length ?? 0,
+            following: (profileData['following'] as List?)?.length ?? 0,
+            profileImageUrl: userData['profile_picture'],
+          );
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("사용자 프로필 불러오기 오류: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  // 팔로워/팔로잉 수를 표시하고 클릭 시 이동하는 위젯
   Widget _buildStatItem(
-      String count, String type, BuildContext context, UserModel user) {
+      String count, String type, BuildContext context, String userId) {
     return InkWell(
       onTap: () {
-        _navigateToFollowersFollowing(context, user, type); // ✅ type 전달
-      },
-      splashFactory: NoSplash.splashFactory,
-      borderRadius: BorderRadius.circular(4),
-      child: Row(
-        children: [
-          Text(
-            count, // 팔로워 또는 팔로잉 수
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FollowersFollowingScreen(
+              type: type,
+              userId: userId,
             ),
           ),
+        );
+      },
+      child: Row(
+        children: [
+          Text(count,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           SizedBox(width: 4),
-          Text(
-            type, // "팔로워" 또는 "팔로잉"
-            style: TextStyle(color: Colors.grey, fontSize: 14),
-          ),
+          Text(type, style: TextStyle(color: Colors.grey, fontSize: 14)),
         ],
       ),
     );
@@ -72,175 +105,189 @@ class _MypagescreenState extends State<Mypagescreen> {
     return DefaultTabController(
       length: 3, // 탭의 개수 설정 (프로필, 피드, 일정 탭)
       child: Scaffold(
-        backgroundColor: Colors.white, // 배경색
-        appBar: AppBar(
-          backgroundColor: Colors.white, // 앱바 배경색
-          elevation: 0, // 그림자 제거
-          leading: IconButton(
-            icon: Icon(Icons.bar_chart, color: Colors.black), // 메뉴 버튼
-            onPressed: () {},
-          ),
-          actions: [
-            // 공유 아이콘 버튼
-            IconButton(
-              icon: Icon(Icons.ios_share_outlined, color: Colors.black),
+          backgroundColor: Colors.white, // 배경색
+          appBar: AppBar(
+            backgroundColor: Colors.white, // 앱바 배경색
+            elevation: 0, // 그림자 제거
+            leading: IconButton(
+              icon: Icon(Icons.bar_chart, color: Colors.black), // 메뉴 버튼
               onPressed: () {},
             ),
-            // 설정 아이콘 버튼
-            IconButton(
-              icon: Icon(Icons.settings, color: Colors.black),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => SettingsScreen()), // 설정 화면으로 이동
-                );
-              },
-            ),
-          ],
-        ),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: [
-              // 사용자 정보 및 팔로워/팔로잉 정보 표시
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 사용자 이름
-                        Text(
-                          user.userName,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        // 사용자 아이디
-                        Text(
-                          user.userId,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFFb2b2b2),
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        Row(
-                          children: [
-                            // 팔로워, 팔로잉 항목
-                            _buildStatItem(
-                                '${user.followers}', '팔로워', context, user),
-                            SizedBox(width: 12),
-                            _buildStatItem(
-                                '${user.following}', '팔로잉', context, user),
-                          ],
-                        ),
-
-                        SizedBox(height: 12),
-                        _buildBioSection(), // 🔥 사용자 소개 + 더보기 버튼
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        // 프로필 이미지
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundImage: user.profileImageUrl != null
-                              ? NetworkImage(user.profileImageUrl!)
-                              : null, // 기본 이미지 처리 가능
-                        ),
-                        // 플래그 아이콘
-                        // 국기 아이콘 적용
-                        CircleAvatar(
-                          radius: 12,
-                          backgroundColor: Colors.white,
-                          child: ClipRRect(
-                            borderRadius:
-                                BorderRadius.circular(8), // 모서리를 둥글게 만듦
-                            child: CountryFlag.fromCountryCode(
-                              'KR', // 대한민국 국기
-                              height: 18,
-                              width: 18,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            actions: [
+              // 공유 아이콘 버튼
+              IconButton(
+                icon: Icon(Icons.ios_share_outlined, color: Colors.black),
+                onPressed: () {},
               ),
-              SizedBox(height: 12),
-              // 프로필 수정 및 프로필 공유 버튼
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF477BFF),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: Text(
-                        '프로필 수정',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {},
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.grey),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        splashFactory: NoSplash.splashFactory,
-                      ),
-                      child: Text(
-                        '프로필 공유',
-                        style: TextStyle(color: Colors.black),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              // 탭바
-              TabBar(
-                labelColor: Color(0xFF424242),
-                unselectedLabelColor: Colors.grey,
-                indicatorColor: Color(0xFF424242),
-                indicatorSize: TabBarIndicatorSize.tab,
-                splashFactory: NoSplash.splashFactory,
-                overlayColor: WidgetStateProperty.all(Colors.transparent),
-                tabs: [
-                  Tab(icon: Icon(Icons.account_box)), // 프로필 탭
-                  Tab(icon: Icon(Icons.grid_view_rounded)), // 피드 탭
-                  Tab(icon: Icon(Icons.calendar_month)) // 일정 탭
-                ],
-              ),
-              // 탭에 해당하는 뷰
-              Expanded(
-                child: TabBarView(
-                  children: [ProfileTab(), FeedTab(), ScheduleTab()],
-                ),
+              // 설정 아이콘 버튼
+              IconButton(
+                icon: Icon(Icons.settings, color: Colors.black),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => SettingsScreen()), // 설정 화면으로 이동
+                  );
+                },
               ),
             ],
           ),
-        ),
-      ),
+          body: isLoading
+              ? Center(child: CircularProgressIndicator())
+              : user == null
+                  ? Center(child: Text("사용자 정보를 불러올 수 없습니다."))
+                  : Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            children: [
+                              // 사용자 정보 및 팔로워/팔로잉 정보 표시
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(user!.userName,
+                                            style: TextStyle(
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.bold)),
+                                        SizedBox(height: 4),
+                                        Text(user!.userId,
+                                            style: TextStyle(
+                                                fontSize: 16,
+                                                color: Color(0xFFb2b2b2))),
+                                        SizedBox(height: 12),
+                                        Row(
+                                          children: [
+                                            _buildStatItem('${user!.followers}',
+                                                '팔로워', context, user!.userId),
+                                            SizedBox(width: 12),
+                                            _buildStatItem('${user!.following}',
+                                                '팔로잉', context, user!.userId),
+                                          ],
+                                        ),
+                                        SizedBox(height: 12),
+                                        _buildBioSection(),
+                                      ],
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: Stack(
+                                      alignment: Alignment.bottomRight,
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 40,
+                                          backgroundColor: Colors.grey[300],
+                                          backgroundImage:
+                                              (user!.profileImageUrl != null &&
+                                                      user!.profileImageUrl!
+                                                          .isNotEmpty)
+                                                  ? NetworkImage(
+                                                      user!.profileImageUrl!)
+                                                  : null,
+                                          child:
+                                              (user!.profileImageUrl == null ||
+                                                      user!.profileImageUrl!
+                                                          .isEmpty)
+                                                  ? Icon(Icons.person,
+                                                      size: 40,
+                                                      color: Colors.white)
+                                                  : null,
+                                        ),
+                                        CircleAvatar(
+                                          radius: 12,
+                                          backgroundColor: Colors.white,
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            child: CountryFlag.fromCountryCode(
+                                              'KR',
+                                              height: 18,
+                                              width: 18,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (context) =>
+                                                    ProfileEditScreen()));
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Color(0xFF477BFF),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8)),
+                                      ),
+                                      child: Text('프로필 편집',
+                                          style:
+                                              TextStyle(color: Colors.white)),
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () {},
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(color: Colors.grey),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8)),
+                                        splashFactory: NoSplash.splashFactory,
+                                      ),
+                                      child: Text('프로필 공유',
+                                          style:
+                                              TextStyle(color: Colors.black)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 12),
+                            ],
+                          ),
+                        ), // 여기까지 Padding 적용
+
+                        TabBar(
+                          labelColor: Color(0xFF424242),
+                          unselectedLabelColor: Colors.grey,
+                          indicatorColor: Color(0xFF424242),
+                          indicatorSize: TabBarIndicatorSize.tab,
+                          splashFactory: NoSplash.splashFactory,
+                          overlayColor:
+                              WidgetStateProperty.all(Colors.transparent),
+                          tabs: [
+                            Tab(icon: Icon(Icons.account_box)),
+                            Tab(icon: Icon(Icons.grid_view_rounded)),
+                            Tab(icon: Icon(Icons.calendar_month))
+                          ],
+                        ),
+
+                        // abBarView는 패딩 없이 Expanded로 감싸기
+                        Expanded(
+                          child: TabBarView(
+                            children: [ProfileTab(), FeedTab(), ScheduleTab()],
+                          ),
+                        ),
+                      ],
+                    )),
     );
   }
 
@@ -250,7 +297,7 @@ class _MypagescreenState extends State<Mypagescreen> {
       builder: (context, constraints) {
         final textPainter = TextPainter(
           text: TextSpan(
-            text: user.bio,
+            text: user!.bio,
             style: TextStyle(color: Colors.grey, fontSize: 14),
           ),
           maxLines: 2,
@@ -264,11 +311,12 @@ class _MypagescreenState extends State<Mypagescreen> {
           children: [
             // 사용자 소개 텍스트
             Text(
-              user.bio,
+              (user!.bio.trim().isEmpty) ? "자기소개를 입력해주세요." : user!.bio,
               style: TextStyle(color: Colors.grey, fontSize: 14),
               maxLines: showFullText ? null : 2,
               overflow: showFullText ? null : TextOverflow.ellipsis,
             ),
+
             // '더보기' 버튼
             Visibility(
               visible: isOverflowing && !showFullText,

@@ -1,14 +1,20 @@
+import 'package:capstone_proj/providers/sign_up_provider.dart';
+import 'package:capstone_proj/screens/onboarding/BasicInfoScreen.dart';
+import 'package:capstone_proj/widgets/ProgressBar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
+import 'package:provider/provider.dart';
 
 class PhoneVerificationScreen extends StatefulWidget {
-  final String phoneNumber;
+  //final String phoneNumber;
   final String verificationId;
+  final int currentStep; // 현재 회원가입 단계
 
   PhoneVerificationScreen({
-    required this.phoneNumber,
+    //required this.phoneNumber,
     required this.verificationId,
+    this.currentStep = 6,
   });
 
   @override
@@ -22,7 +28,6 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   bool _isTimerRunning = true;
   bool _isButtonEnabled = false;
   bool _isLoading = false;
-  String _enteredOTP = "";
   final TextEditingController _pinController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -68,14 +73,24 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     );
 
     try {
-      await _auth.signInWithCredential(credential);
+      // 현재 로그인된 사용자 (이메일 인증을 통해 로그인됨)
+      User? user = _auth.currentUser;
+
+      // 전화번호 인증 후 기존 계정에 연결
+      await user?.linkWithCredential(credential);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("인증 성공!")),
+        SnackBar(content: Text("전화번호 인증 성공!")),
       );
-      // TODO: 로그인 후 다음 화면으로 이동
+
+      // 인증 성공 시 BasicInfoScreen으로 이동
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => BasicInfoScreen()),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("인증 실패: ${e.toString()}")),
+        SnackBar(content: Text("전화번호 인증 실패: ${e.toString()}")),
       );
     }
 
@@ -92,6 +107,9 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final signUpProvider = Provider.of<SignUpProvider>(context, listen: false);
+    String phoneNumber = signUpProvider.data.phoneNumber;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -109,13 +127,14 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            ProgressBar(progress: widget.currentStep / 10),
             Text(
               "휴대전화 번호 인증",
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 8),
             Text(
-              "${widget.phoneNumber} 로 인증번호가 전송되었습니다.\n수신된 인증번호를 입력해주세요.",
+              "$phoneNumber 로 인증번호가 전송되었습니다.\n수신된 인증번호를 입력해주세요.",
               style: TextStyle(color: Colors.grey, fontSize: 16),
             ),
             SizedBox(height: 40),
@@ -126,13 +145,11 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                 showCursor: true,
                 onChanged: (value) {
                   setState(() {
-                    _enteredOTP = value;
                     _isButtonEnabled = value.length == 6;
                   });
                 },
                 onCompleted: (value) {
                   setState(() {
-                    _enteredOTP = value;
                     _isButtonEnabled = true;
                   });
                 },

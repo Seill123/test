@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:capstone_proj/screens/onboarding/welcome_screen.dart'; // 로그아웃 후 이동할 화면
 
 class SettingsScreen extends StatelessWidget {
   @override
@@ -31,9 +33,12 @@ class SettingsScreen extends StatelessWidget {
             _buildMenuItem(text: '개인정보 처리방침', icon: Icons.lock_outline),
             _buildMenuItem(text: '서비스 이용약관', icon: Icons.article_outlined),
           ]),
-          _buildSectionTitle("계정"),
           _buildSection([
-            _buildMenuItem(text: '로그아웃', icon: Icons.exit_to_app),
+            _buildMenuItem(
+              text: '로그아웃',
+              icon: Icons.exit_to_app,
+              onTap: () => _logout(context), // 로그아웃 기능 추가
+            ),
             _buildMenuItem(
               text: '탈퇴하기',
               icon: Icons.delete_forever,
@@ -46,16 +51,44 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  /// 🔹 섹션 제목 (텍스트만)
+  /// 🔹 로그아웃 함수
+  void _logout(BuildContext context) async {
+    try {
+      final auth = FirebaseAuth.instance;
+      await auth.signOut(); // 🔹 로그아웃 실행
+
+      await Future.delayed(Duration(milliseconds: 500)); // 🔹 Firebase 상태 반영 대기
+
+      // Firebase 인증 상태가 변경될 때까지 기다림
+      await FirebaseAuth.instance.authStateChanges().first;
+
+      if (!context.mounted) return; // 🔹 UI가 여전히 활성화된 상태인지 확인
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+            builder: (context) => WelcomeScreen()), // 🔹 로그인 화면으로 이동
+        (route) => false, // 🔹 모든 이전 화면 제거
+      );
+    } catch (e) {
+      print("로그아웃 오류: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("로그아웃에 실패했습니다. 다시 시도해주세요.")),
+      );
+    }
+  }
+
+  /// 🔹 섹션 제목
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 16.0, top: 24.0, bottom: 8.0),
+      padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
       child: Text(
         title,
         style: TextStyle(
-            fontSize: 14.0,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[700]),
+          fontSize: 14.0,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey[700],
+        ),
       ),
     );
   }

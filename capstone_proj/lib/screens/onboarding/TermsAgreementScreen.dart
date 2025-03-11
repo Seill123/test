@@ -1,7 +1,12 @@
 import 'package:capstone_proj/screens/onboarding/signup_screen.dart';
+import 'package:capstone_proj/widgets/ProgressBar.dart';
 import 'package:flutter/material.dart';
 
 class TermsAgreementScreen extends StatefulWidget {
+  final int currentStep; // 현재 회원가입 단계
+
+  TermsAgreementScreen({this.currentStep = 1}); // 기본값: 첫 번째 단계
+
   @override
   _TermsAgreementScreenState createState() => _TermsAgreementScreenState();
 }
@@ -61,6 +66,7 @@ class _TermsAgreementScreenState extends State<TermsAgreementScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            ProgressBar(progress: widget.currentStep / 10),
             Text(
               "Tabtalk 이용약관에 \n동의해 주세요",
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),

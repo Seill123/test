@@ -51,9 +51,19 @@
 			<dict>
 				<key>CFBundleURLSchemes</key>
 				<array>
+					<!-- Google 인증용 REVERSED_CLIENT_ID -->
 					<string>com.googleusercontent.apps.781349030379-hojb3k1cftke0o4n1eisjf5421if4ceh</string>
+					
+					<!-- Firebase Phone 인증 및 딥 링크용 번들 ID -->
+					<string>com.example.capstoneProj</string>
 				</array>
 			</dict>
+		</array>
+
+		<!-- Firebase Dynamic Links Custom Domains 설정 -->
+		<key>FirebaseDynamicLinksCustomDomains</key>
+		<array>
+			<string>https://tabtalk-c3dc3.firebaseapp.com</string>
 		</array>
 
 		<key>NSAppTransportSecurity</key>

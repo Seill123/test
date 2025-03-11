@@ -1,12 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:capstone_proj/models/user_model.dart';
 
-// 팔로워 및 팔로잉 목록을 보여주는 화면
 class FollowersFollowingScreen extends StatefulWidget {
-  final UserModel user;
-  final String type; // '팔로워' 또는 '팔로잉'을 전달받음
+  final String type; // '팔로워' 또는 '팔로잉'
+  final String userId; // Firestore에서 데이터를 가져오기 위한 UID
 
-  FollowersFollowingScreen({required this.user, required this.type});
+  FollowersFollowingScreen({required this.type, required this.userId});
 
   @override
   _FollowersFollowingScreenState createState() =>
@@ -16,16 +15,43 @@ class FollowersFollowingScreen extends StatefulWidget {
 class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  List<String> followers = [];
+  List<String> following = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // '팔로워' 클릭 시 0번 탭, '팔로잉' 클릭 시 1번 탭을 초기 선택
     _tabController = TabController(
       length: 2,
       vsync: this,
       initialIndex: widget.type == '팔로워' ? 0 : 1,
     );
+    fetchFollowersAndFollowing();
+  }
+
+  Future<void> fetchFollowersAndFollowing() async {
+    try {
+      DocumentSnapshot profileDoc = await FirebaseFirestore.instance
+          .collection('user_profile')
+          .doc(widget.userId)
+          .get();
+
+      if (profileDoc.exists) {
+        var data = profileDoc.data() as Map<String, dynamic>;
+
+        setState(() {
+          followers = List<String>.from(data['followers'] ?? []);
+          following = List<String>.from(data['following'] ?? []);
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("팔로워/팔로잉 불러오기 오류: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -36,12 +62,10 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
         backgroundColor: Colors.white,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pop(context); // 뒤로 가기 버튼
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          widget.user.userName, // 사용자 이름 적용
+          widget.type, // "팔로워" 또는 "팔로잉"
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.bold,
@@ -49,7 +73,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
           ),
         ),
         bottom: TabBar(
-          controller: _tabController, // TabController 적용
+          controller: _tabController,
           labelColor: Color(0xFF424242),
           unselectedLabelColor: Colors.grey,
           indicatorColor: Color(0xFF424242),
@@ -57,60 +81,106 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
           splashFactory: NoSplash.splashFactory,
           overlayColor: WidgetStateProperty.all(Colors.transparent),
           tabs: [
-            Tab(text: '${widget.user.followers} 팔로워'), // 모델 데이터로 팔로워 수 적용
-            Tab(text: '${widget.user.following} 팔로잉'), // 모델 데이터로 팔로잉 수 적용
+            Tab(text: '${followers.length} 팔로워'),
+            Tab(text: '${following.length} 팔로잉'),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController, // TabController 적용
-        children: [
-          FollowersTab(followersCount: widget.user.followers), // 팔로워 탭
-          FollowingTab(followingCount: widget.user.following), // 팔로잉 탭
-        ],
-      ),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                FollowersTab(followers: followers),
+                FollowingTab(following: following),
+              ],
+            ),
     );
   }
 }
 
-// 팔로워 목록을 보여주는 탭
+// ✅ Firestore에서 가져온 팔로워 데이터 표시
 class FollowersTab extends StatelessWidget {
-  final int followersCount;
+  final List<String> followers;
 
-  FollowersTab({required this.followersCount});
+  FollowersTab({required this.followers});
 
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      itemCount: followersCount, // 팔로워 수만큼 리스트 아이템 생성
+      itemCount: followers.length,
       itemBuilder: (context, index) {
-        return ListTile(
-          leading: CircleAvatar(
-            child: Icon(Icons.person), // 기본 아이콘 (추후 이미지 적용 가능)
-          ),
-          title: Text('팔로워 ${index + 1}'), // 예제 데이터로 팔로워 번호 출력
+        return FutureBuilder<DocumentSnapshot>(
+          future: FirebaseFirestore.instance
+              .collection('users')
+              .doc(followers[index])
+              .get(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return ListTile(
+                title: Text("불러오는 중..."),
+                leading: CircleAvatar(child: Icon(Icons.person)),
+              );
+            }
+
+            var userData = snapshot.data!.data() as Map<String, dynamic>;
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundImage: userData['profile_picture'] != null
+                    ? NetworkImage(userData['profile_picture'])
+                    : null,
+                child: userData['profile_picture'] == null
+                    ? Icon(Icons.person)
+                    : null,
+              ),
+              title: Text(userData['user_name'] ?? "Unknown"),
+              subtitle: Text("@${userData['user_id'] ?? "unknown"}"),
+            );
+          },
         );
       },
     );
   }
 }
 
-// 팔로잉 목록을 보여주는 탭
+// ✅ Firestore에서 가져온 팔로잉 데이터 표시
 class FollowingTab extends StatelessWidget {
-  final int followingCount;
+  final List<String> following;
 
-  FollowingTab({required this.followingCount});
+  FollowingTab({required this.following});
 
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      itemCount: followingCount, // 팔로잉 수만큼 리스트 아이템 생성
+      itemCount: following.length,
       itemBuilder: (context, index) {
-        return ListTile(
-          leading: CircleAvatar(
-            child: Icon(Icons.person), // 기본 아이콘 (추후 이미지 적용 가능)
-          ),
-          title: Text('팔로잉 ${index + 1}'), // 예제 데이터로 팔로잉 번호 출력
+        return FutureBuilder<DocumentSnapshot>(
+          future: FirebaseFirestore.instance
+              .collection('users')
+              .doc(following[index])
+              .get(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return ListTile(
+                title: Text("불러오는 중..."),
+                leading: CircleAvatar(child: Icon(Icons.person)),
+              );
+            }
+
+            var userData = snapshot.data!.data() as Map<String, dynamic>;
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundImage: userData['profile_picture'] != null
+                    ? NetworkImage(userData['profile_picture'])
+                    : null,
+                child: userData['profile_picture'] == null
+                    ? Icon(Icons.person)
+                    : null,
+              ),
+              title: Text(userData['user_name'] ?? "Unknown"),
+              subtitle: Text("@${userData['user_id'] ?? "unknown"}"),
+            );
+          },
         );
       },
     );

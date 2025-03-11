@@ -1,12 +1,16 @@
+import 'package:capstone_proj/providers/sign_up_provider.dart';
+import 'package:capstone_proj/screens/onboarding/email_verification_Screen.dart';
+import 'package:capstone_proj/widgets/ProgressBar.dart';
 import 'package:flutter/material.dart';
-import 'package:capstone_proj/screens/onboarding/profile_screen.dart';
 import 'package:capstone_proj/screens/onboarding/signup_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
 class PasswordScreen extends StatefulWidget {
-  final String email; // 이메일을 받을 변수 추가
+  //final String email;
+  final int currentStep; // 현재 회원가입 단계
 
-  // 생성자 수정 (super.key 추가)
-  PasswordScreen({Key? key, required this.email}) : super(key: key);
+  const PasswordScreen({Key? key, this.currentStep = 3}) : super(key: key);
 
   @override
   _PasswordScreenState createState() => _PasswordScreenState();
@@ -27,6 +31,8 @@ class _PasswordScreenState extends State<PasswordScreen> {
   bool hasSpecialChar = false;
   bool hasMinLength = false;
 
+  bool _isLoading = false;
+
   void _validatePassword(String password) {
     setState(() {
       isTyping = password.isNotEmpty; // 입력 중이면 조건 표시
@@ -45,19 +51,63 @@ class _PasswordScreenState extends State<PasswordScreen> {
     });
   }
 
+  // 🔹 이메일 인증 링크 전송
+  void _sendEmailVerification() async {
+    setState(() {
+      _isLoading = true; // 로딩 상태 시작
+    });
+
+    try {
+      final signUpProvider =
+          Provider.of<SignUpProvider>(context, listen: false);
+      signUpProvider.updateUserData(password: passwordController.text);
+
+      String email = signUpProvider.data.email; //Provider에서 이메일 가져오기
+      String password = signUpProvider.data.password;
+
+      FirebaseAuth auth = FirebaseAuth.instance;
+      UserCredential userCredential = await auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      User? user = userCredential.user;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+      }
+
+      // 🔹 EmailVerificationScreen으로 이동
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EmailVerificationScreen(),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("이메일 인증 링크 전송 실패: ${e.toString()}")),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false; // 로딩 상태 종료
+      });
+    }
+  }
+
   Widget _buildConditionRow(String text, bool conditionMet) {
     return Row(
+      mainAxisSize: MainAxisSize.min, // 최소 크기로 설정
       children: [
         Icon(
           conditionMet ? Icons.check_circle : Icons.cancel,
           color: conditionMet ? Colors.green : Colors.red,
-          size: 18,
+          size: 16,
         ),
-        SizedBox(width: 8),
+        SizedBox(width: 4), // 아이콘과 텍스트 간격 축소
         Text(
           text,
           style: TextStyle(
-              color: conditionMet ? Colors.green : Colors.red, fontSize: 14),
+              color: conditionMet ? Colors.green : Colors.red, fontSize: 12),
         ),
       ],
     );
@@ -85,6 +135,7 @@ class _PasswordScreenState extends State<PasswordScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            ProgressBar(progress: widget.currentStep / 10),
             Text(
               '비밀번호 설정',
               style: TextStyle(
@@ -104,9 +155,8 @@ class _PasswordScreenState extends State<PasswordScreen> {
               onChanged: _validatePassword,
               decoration: InputDecoration(
                 hintText: '비밀번호 입력',
-                helperText: isTyping
-                    ? null
-                    : '영문 대소문자, 숫자, 특수문자 포함 8자리 이상 입력해주세요.', // 입력 전에는 기본 안내 메시지
+                helperText:
+                    isTyping ? null : '영문 대소문자, 숫자, 특수문자 포함 8자리 이상 입력해주세요.',
                 focusedBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Color(0xFF477BFF))),
                 suffixIcon: IconButton(
@@ -126,10 +176,26 @@ class _PasswordScreenState extends State<PasswordScreen> {
 
             // 입력 시작하면 조건 체크 리스트 표시
             if (isTyping) ...[
-              _buildConditionRow("대문자 포함", hasUpperCase),
-              _buildConditionRow("숫자 포함", hasNumber),
-              _buildConditionRow("특수문자 포함", hasSpecialChar),
-              _buildConditionRow("8자 이상 입력", hasMinLength),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Flexible(
+                    child: _buildConditionRow("대소문자", hasUpperCase),
+                  ),
+                  SizedBox(width: 8), // 아이템 간격 축소
+                  Flexible(
+                    child: _buildConditionRow("숫자", hasNumber),
+                  ),
+                  SizedBox(width: 8),
+                  Flexible(
+                    child: _buildConditionRow("특수문자", hasSpecialChar),
+                  ),
+                  SizedBox(width: 8),
+                  Flexible(
+                    child: _buildConditionRow("8자 이상", hasMinLength),
+                  ),
+                ],
+              ),
             ],
 
             SizedBox(height: 24),
@@ -197,20 +263,15 @@ class _PasswordScreenState extends State<PasswordScreen> {
                           hasSpecialChar &&
                           hasMinLength &&
                           isPasswordMatched)
-                      ? () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => ProfileScreen(
-                                    email: widget.email,
-                                    password: passwordController.text)),
-                          );
-                        }
+                      ? _sendEmailVerification
                       : null,
-                  child: Text(
-                    '다음',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  child: _isLoading
+                      ? CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          '다음',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: (hasUpperCase &&
                             hasNumber &&

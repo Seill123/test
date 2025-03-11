@@ -69,7 +69,7 @@ class LoginScreen extends StatelessWidget {
               height: 48, //버튼 높이
               child: ElevatedButton(
                 onPressed: () {
-                  _controller.login();
+                  _controller.login(context);
                 },
                 child: Text(
                   '로그인',

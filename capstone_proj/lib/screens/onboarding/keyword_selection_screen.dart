@@ -1,11 +1,13 @@
+import 'package:capstone_proj/providers/sign_up_provider.dart';
+import 'package:capstone_proj/screens/onboarding/profile_screen.dart';
 import 'package:capstone_proj/screens/onboarding/registration_complete_screen.dart';
+import 'package:capstone_proj/widgets/ProgressBar.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class KeywordSelectionScreen extends StatefulWidget {
-  final String email;
-  final String password;
-
-  KeywordSelectionScreen({required this.email, required this.password});
+  final int currentStep; // 현재 회원가입 단계
+  KeywordSelectionScreen({this.currentStep = 10});
 
   @override
   _KeywordSelectionScreenState createState() => _KeywordSelectionScreenState();
@@ -53,12 +55,21 @@ class _KeywordSelectionScreenState extends State<KeywordSelectionScreen> {
               label: Text(keyword),
               selected: isSelected,
               onSelected: (_) => toggleKeyword(keyword),
-              selectedColor: Color(0xFF477BFF),
-              backgroundColor: Colors.grey[200],
+              selectedColor: Color(0xFFD5E7FF), // 선택된 배경색
+              backgroundColor: Colors.grey[200], // 기본 배경색
+              side: BorderSide(
+                color: isSelected
+                    ? Color(0xFF477BFF)
+                    : Colors.transparent, // 선택된 경우 테두리 적용
+                width: 2,
+              ),
               labelStyle: TextStyle(
-                color: isSelected ? Colors.white : Color(0xFF7A7A7A),
+                color: isSelected
+                    ? Color(0xFF477BFF)
+                    : Color(0xFF7A7A7A), // 선택된 경우 텍스트 색상 변경
                 fontWeight: FontWeight.bold,
               ),
+              showCheckmark: false,
             );
           }).toList(),
         ),
@@ -68,6 +79,7 @@ class _KeywordSelectionScreenState extends State<KeywordSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final signUpProvider = Provider.of<SignUpProvider>(context, listen: false);
     // 예시 키워드 데이터
     final List<String> hobbies = [
       '뷰티',
@@ -121,7 +133,10 @@ class _KeywordSelectionScreenState extends State<KeywordSelectionScreen> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context); // 뒤로 가기
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => ProfileScreen()),
+            );
           },
         ),
         elevation: 0,
@@ -129,54 +144,53 @@ class _KeywordSelectionScreenState extends State<KeywordSelectionScreen> {
         backgroundColor: Colors.white,
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            ProgressBar(progress: widget.currentStep / 10),
+
+            // 🔥 스크롤되지 않는 부분
+            Text(
+              "관심있는 키워드를\n설정해주세요.",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Text(
+              "관심있는 키워드를 선택하면\n관심사가 비슷한 친구를 추천해줍니다.",
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            SizedBox(height: 20),
+
+            // 🔥 스크롤이 필요한 부분만 Expanded + ListView 사용
             Expanded(
-              // ListView를 감싸서 전체 화면을 차지하도록 함
               child: ListView(
                 children: [
-                  SizedBox(height: 10),
-                  Text(
-                    "관심있는 키워드를\n설정해주세요.",
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "관심있는 키워드를 선택하면\n관심사가 비슷한 친구를 추천해줍니다.",
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  SizedBox(height: 20),
-
-                  // 각 섹션 렌더링
                   buildKeywordSection("💗 취미", hobbies),
-                  SizedBox(height: 30), // 섹션 간 간격
+                  SizedBox(height: 30),
                   buildKeywordSection("🍕 음식", foods),
-                  SizedBox(height: 30), // 섹션 간 간격
+                  SizedBox(height: 30),
                   buildKeywordSection("⚽ 스포츠/운동", sports),
-
                   SizedBox(height: 40),
                 ],
               ),
             ),
 
-            // 완료 버튼
+            // 완료 버튼 (스크롤되지 않음)
             Padding(
-              padding: const EdgeInsets.only(bottom: 40),
+              padding: const EdgeInsets.only(bottom: 24),
               child: SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
                   onPressed: () {
+                    signUpProvider.updateUserData(
+                        interestKeywords: selectedKeywords);
                     print("선택된 키워드: $selectedKeywords");
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => RegistrationCompleteScreen(
-                                email: widget.email,
-                                password: widget.password,
-                              )),
+                          builder: (context) => RegistrationCompleteScreen()),
                     );
                   },
                   child: Text(

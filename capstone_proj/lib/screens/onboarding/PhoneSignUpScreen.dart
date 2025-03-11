@@ -1,8 +1,14 @@
+import 'package:capstone_proj/providers/sign_up_provider.dart';
 import 'package:capstone_proj/screens/onboarding/PhoneVerificationScreen.dart';
+import 'package:capstone_proj/widgets/ProgressBar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class PhoneSignUpScreen extends StatefulWidget {
+  final int currentStep; // 현재 회원가입 단계
+  PhoneSignUpScreen({this.currentStep = 5});
+
   @override
   _PhoneSignUpScreenState createState() => _PhoneSignUpScreenState();
 }
@@ -49,9 +55,15 @@ class _PhoneSignUpScreenState extends State<PhoneSignUpScreen> {
       _isLoading = true;
     });
 
-    String phoneNumber = "+82${_phoneController.text.substring(1)}"; // 국제번호 변환
+    //String phoneNumber = "+82${_phoneController.text.substring(1)}"; // 국제번호 변환
 
     try {
+      final signUpProvider =
+          Provider.of<SignUpProvider>(context, listen: false);
+      String phoneNumber =
+          "+82${_phoneController.text.substring(1)}"; // 국제번호 변환
+      signUpProvider.updateUserData(phoneNumber: phoneNumber);
+
       await _auth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
         timeout: const Duration(seconds: 60), // 타임아웃 설정 (60초)
@@ -88,7 +100,7 @@ class _PhoneSignUpScreenState extends State<PhoneSignUpScreen> {
             context,
             MaterialPageRoute(
               builder: (context) => PhoneVerificationScreen(
-                phoneNumber: _phoneController.text,
+                //phoneNumber: _phoneController.text,
                 verificationId: verificationId,
               ),
             ),
@@ -130,6 +142,7 @@ class _PhoneSignUpScreenState extends State<PhoneSignUpScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            ProgressBar(progress: widget.currentStep / 10),
             Text(
               "휴대전화 번호를 인증해주세요.",
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),

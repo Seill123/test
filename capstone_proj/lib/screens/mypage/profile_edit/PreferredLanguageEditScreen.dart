@@ -1,39 +1,73 @@
-import 'package:capstone_proj/providers/sign_up_provider.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class LanguageScreen extends StatefulWidget {
+class PreferredLanguageEditScreen extends StatefulWidget {
+  final String currentPreferredLanguage;
+
+  PreferredLanguageEditScreen({required this.currentPreferredLanguage});
+
   @override
-  _LanguageScreenState createState() => _LanguageScreenState();
+  _PreferredLanguageEditScreenState createState() =>
+      _PreferredLanguageEditScreenState();
 }
 
-class _LanguageScreenState extends State<LanguageScreen> {
-  List<Map<String, String>> allLanguage = [];
-  List<Map<String, String>> filteredLanguage = [];
+class _PreferredLanguageEditScreenState
+    extends State<PreferredLanguageEditScreen> {
+  List<Map<String, String>> allLanguages = [];
+  List<Map<String, String>> filteredLanguages = [];
   String selectedLanguage = "";
+  bool _isSaving = false;
   FocusNode searchFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    loadJsonData();
-
-    final signUpProvider = Provider.of<SignUpProvider>(context, listen: false);
-    selectedLanguage = signUpProvider.data.nativeLanguage;
+    selectedLanguage = widget.currentPreferredLanguage;
+    loadLanguages();
   }
 
-  Future<void> loadJsonData() async {
+  Future<void> loadLanguages() async {
     String jsonString = await rootBundle.loadString('assets/languages.json');
     List<dynamic> jsonResponse = json.decode(jsonString);
     List<Map<String, String>> languages =
         jsonResponse.map((data) => Map<String, String>.from(data)).toList();
 
     setState(() {
-      allLanguage = languages;
-      filteredLanguage = languages;
+      allLanguages = languages;
+      filteredLanguages = languages;
     });
+  }
+
+  Future<void> _savePreferredLanguage() async {
+    if (selectedLanguage.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("관심 언어를 선택해주세요.")),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({'preferred_language': selectedLanguage});
+
+        Navigator.pop(context, selectedLanguage);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("관심 언어 저장 중 오류 발생")),
+      );
+    } finally {
+      setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -47,47 +81,52 @@ class _LanguageScreenState extends State<LanguageScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        elevation: 0,
+        title: Text('관심 언어',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        centerTitle: true,
         backgroundColor: Colors.grey[100],
         scrolledUnderElevation: 0,
+        actions: [
+          TextButton(
+            onPressed: _isSaving ? null : _savePreferredLanguage,
+            child: Text(
+              '완료',
+              style: TextStyle(
+                color: _isSaving ? Colors.grey : Color(0xFF477BFF),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 타이틀 텍스트
+            // 타이틀
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "모국어를 선택해주세요.",
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
+                  Text("관심 있는 언어를 \n선택해주세요",
+                      style:
+                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   SizedBox(height: 8),
-                  Text(
-                    "이후 변경할 수 없으니 정확히 선택해주세요.",
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
+                  Text("관심있는 언어를 친구들에게 알려주세요.",
+                      style: TextStyle(fontSize: 14, color: Colors.grey)),
                 ],
               ),
             ),
-            SizedBox(height: 4),
-
-            // 검색 입력 필드
+            // 검색창
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: TextField(
                 focusNode: searchFocusNode,
                 onChanged: (value) {
                   setState(() {
-                    filteredLanguage = allLanguage
+                    filteredLanguages = allLanguages
                         .where((lang) =>
                             lang["en"]!
                                 .toLowerCase()
@@ -105,36 +144,29 @@ class _LanguageScreenState extends State<LanguageScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.0),
-                    borderSide: BorderSide(
-                      color: Color(0xFF477BFF),
-                      width: 2,
-                    ),
+                    borderSide: BorderSide(color: Color(0xFF477BFF), width: 2),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.0),
-                    borderSide: BorderSide(
-                      color: Colors.grey,
-                      width: 1.0,
-                    ),
+                    borderSide: BorderSide(color: Colors.grey, width: 1.0),
                   ),
                 ),
               ),
             ),
             SizedBox(height: 12),
-
             // 언어 리스트
             Expanded(
               child: ListView.builder(
-                itemCount: filteredLanguage.length,
+                itemCount: filteredLanguages.length,
                 itemBuilder: (context, index) {
-                  String languageEn = filteredLanguage[index]["en"]!;
-                  String languagenative = filteredLanguage[index]["native"]!;
-                  bool isSelected = selectedLanguage == languagenative;
+                  String languageEn = filteredLanguages[index]["en"]!;
+                  String languageNative = filteredLanguages[index]["native"]!;
+                  bool isSelected = selectedLanguage == languageNative;
 
                   return GestureDetector(
                     onTap: () {
                       setState(() {
-                        selectedLanguage = languagenative;
+                        selectedLanguage = languageNative;
                       });
                     },
                     child: Container(
@@ -156,7 +188,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                languageEn, // 영어 표시
+                                languageEn,
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: isSelected
@@ -168,7 +200,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                                 ),
                               ),
                               Text(
-                                languagenative, // 한국어 표시
+                                languageNative,
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.grey[600],
@@ -177,48 +209,13 @@ class _LanguageScreenState extends State<LanguageScreen> {
                             ],
                           ),
                           if (isSelected)
-                            Icon(
-                              Icons.check,
-                              color: Color(0xFF477BFF),
-                              size: 24,
-                            ),
+                            Icon(Icons.check,
+                                color: Color(0xFF477BFF), size: 24),
                         ],
                       ),
                     ),
                   );
                 },
-              ),
-            ),
-
-            // 완료 버튼
-            Padding(
-              padding: const EdgeInsets.only(bottom: 40, left: 16, right: 16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: selectedLanguage.isEmpty
-                      ? null
-                      : () {
-                          print("선택된 모국어: $selectedLanguage");
-                          Provider.of<SignUpProvider>(context, listen: false)
-                              .updateUserData(nativeLanguage: selectedLanguage);
-                          Navigator.pop(context, selectedLanguage);
-                        },
-                  child: Text(
-                    '완료',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedLanguage.isEmpty
-                        ? Colors.grey
-                        : Color(0xFF477BFF),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
               ),
             ),
           ],

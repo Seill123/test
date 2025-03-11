@@ -1,13 +1,9 @@
 import 'package:capstone_proj/screens/main_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:capstone_proj/providers/sign_up_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 
 class RegistrationCompleteScreen extends StatefulWidget {
-  final String email;
-  final String password;
-
-  RegistrationCompleteScreen({required this.email, required this.password});
-
   @override
   _RegistrationCompleteScreenState createState() =>
       _RegistrationCompleteScreenState();
@@ -15,8 +11,6 @@ class RegistrationCompleteScreen extends StatefulWidget {
 
 class _RegistrationCompleteScreenState
     extends State<RegistrationCompleteScreen> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
   @override
   void initState() {
     super.initState();
@@ -24,10 +18,15 @@ class _RegistrationCompleteScreenState
   }
 
   Future<void> _registerUser() async {
+    final signUpProvider = Provider.of<SignUpProvider>(context, listen: false);
+
     try {
-      await _auth.createUserWithEmailAndPassword(
-        email: widget.email,
-        password: widget.password,
+      // Firestore에 저장
+      await signUpProvider.saveToFirestore();
+
+      // 데이터 저장 성공 후 처리
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("회원가입이 완료되었습니다!")),
       );
     } catch (e) {
       print("회원가입 실패: $e");

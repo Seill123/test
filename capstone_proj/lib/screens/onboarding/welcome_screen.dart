@@ -1,7 +1,7 @@
 import 'package:capstone_proj/screens/onboarding/TermsAgreementScreen.dart';
+import 'package:capstone_proj/screens/onboarding/login_screen.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:capstone_proj/screens/onboarding/login_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   @override
@@ -55,7 +55,7 @@ class WelcomeScreen extends StatelessWidget {
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50),
+                      borderRadius: BorderRadius.circular(8),
                       side: BorderSide(
                         color: Color(0xFFB2B2B2).withOpacity(0),
                       ),
@@ -80,7 +80,7 @@ class WelcomeScreen extends StatelessWidget {
                     backgroundColor: Colors.black,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
                 ),

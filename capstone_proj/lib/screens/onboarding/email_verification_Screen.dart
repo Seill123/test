@@ -1,13 +1,15 @@
-//UI 다시 할 예정
-
-
-/*import 'package:flutter/material.dart';
+import 'package:capstone_proj/providers/sign_up_provider.dart';
+import 'package:capstone_proj/screens/onboarding/PhoneSignUpScreen.dart';
+import 'package:capstone_proj/widgets/ProgressBar.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:capstone_proj/screens/onboarding/password_screen.dart'; 
+import 'package:provider/provider.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
-  final String email;
-  const EmailVerificationScreen({Key? key, required this.email})
+  //final String email;
+  final int currentStep; // 현재 회원가입 단계
+
+  const EmailVerificationScreen({Key? key, this.currentStep = 4})
       : super(key: key);
 
   @override
@@ -16,46 +18,43 @@ class EmailVerificationScreen extends StatefulWidget {
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
-  bool _isVerified = false;
-  bool _isChecking = false;
+  bool isEmailVerified = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _checkEmailVerified();
+    _checkEmailVerification();
   }
 
-  // 이메일 인증 여부 확인
-  Future<void> _checkEmailVerified() async {
+  // 🔹 이메일 인증 여부 확인
+  Future<void> _checkEmailVerification() async {
     setState(() {
-      _isChecking = true;
+      _isLoading = true; // 로딩 시작
     });
 
     User? user = FirebaseAuth.instance.currentUser;
     await user?.reload(); // 사용자 정보 새로고침
+    setState(() {
+      isEmailVerified = user?.emailVerified ?? false;
+      _isLoading = false; // 로딩 종료
+    });
 
-    if (user != null && user.emailVerified) {
-      setState(() {
-        _isVerified = true;
-      });
-
-      // 인증 완료되면 다음 화면(비밀번호 입력)으로 이동
+    if (isEmailVerified) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => PasswordScreen(email: widget.email),
-        ),
+        MaterialPageRoute(builder: (context) => PhoneSignUpScreen()),
       );
     }
-
-    setState(() {
-      _isChecking = false;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final signUpProvider = Provider.of<SignUpProvider>(context, listen: false);
+    String email = signUpProvider.data.email;
+
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.black),
@@ -63,41 +62,82 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             Navigator.pop(context);
           },
         ),
-        title: Text("이메일 인증"),
-        backgroundColor: Colors.white,
         elevation: 0,
+        backgroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              "이메일을 확인해주세요.",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ProgressBar(progress: widget.currentStep / 10),
+            SizedBox(height: 40),
+            Icon(Icons.email_outlined, size: 80, color: Color(0xFF477BFF)),
+            SizedBox(height: 16),
+
+            // 이메일 안내 메시지를 카드 스타일로 변경
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Text(
+                      "이메일 인증 요청됨",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      "$email 로 전송된\n인증 링크를 확인해주세요.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16, color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            SizedBox(height: 10),
-            Text("인증 링크를 보냈어요. 이메일(${widget.email})을 확인하고 인증을 완료해주세요."),
             SizedBox(height: 20),
-            _isChecking
-                ? Center(child: CircularProgressIndicator())
-                : _isVerified
-                    ? Text(
-                        "이메일 인증이 완료되었습니다!",
-                        style: TextStyle(
-                            color: Colors.green, fontWeight: FontWeight.bold),
-                      )
-                    : Text(
-                        "이메일 인증을 완료한 후, '확인' 버튼을 눌러주세요.",
-                        style: TextStyle(color: Colors.red),
-                      ),
+
+            Text(
+              "이메일이 오지 않았다면 스팸메일함을 확인하거나\n잠시 후 다시 시도해주세요.",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+
             Spacer(),
+
+            // 인증 완료 버튼
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _checkEmailVerification,
+                  child: _isLoading
+                      ? CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          '이메일 인증 완료',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF477BFF),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-}*/
-
-
-
+}
