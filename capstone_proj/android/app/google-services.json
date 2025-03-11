@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "781349030379",
+    "project_id": "tabtalk-c3dc3",
+    "storage_bucket": "tabtalk-c3dc3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:781349030379:android:fc2d632590ee818c68b1ae",
+        "android_client_info": {
+          "package_name": "com.example.capstone_proj"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsOn4Ne5d9E6WxRELvEtW_pg1Eu0iw3Js"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

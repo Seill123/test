@@ -1,0 +1,40 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "tabtalk-c3dc3",
+          "appId": "1:781349030379:android:fc2d632590ee818c68b1ae",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "tabtalk-c3dc3",
+          "appId": "1:781349030379:ios:b8b3e3f008c4323968b1ae",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "tabtalk-c3dc3",
+          "configurations": {
+            "android": "1:781349030379:android:fc2d632590ee818c68b1ae",
+            "ios": "1:781349030379:ios:b8b3e3f008c4323968b1ae"
+          }
+        }
+      }
+    }
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099,
+      "host": "localhost"
+    },
+    "ui": {
+      "enabled": true
+    },
+    "singleProjectMode": true
+  }
+}
