@@ -7,6 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_proj/screens/UploadScreen.dart';
 import 'package:capstone_proj/screens/MyPageScreen.dart';
+import 'package:capstone_proj/screens/SearchScreen.dart';
 
 class MainScreen extends StatefulWidget {
   @override
@@ -108,6 +109,12 @@ class _MainScreenState extends State<MainScreen>
                             size: 28, color: Color(0xFF474747)),
                         onPressed: () {
                           // 검색 버튼 동작
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SearchScreen(),
+                            ),
+                          );
                         },
                       ),
                       IconButton(

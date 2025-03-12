@@ -9,6 +9,7 @@ import 'firebase_options.dart';
 import 'package:capstone_proj/providers/sign_up_provider.dart';
 import 'package:capstone_proj/screens/onboarding/welcome_screen.dart';
 import 'package:capstone_proj/screens/onboarding/PhoneSignUpScreen.dart';
+import 'package:capstone_proj/controllers/search_controller.dart' as AppSearch;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Flutter 엔진 초기화
@@ -36,6 +37,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
             create: (context) => SignUpProvider()), // SignUpProvider 등록
         ChangeNotifierProvider(create: (context) => PostProvider()),
+        ChangeNotifierProvider(
+            create: (context) => AppSearch.SearchController()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
