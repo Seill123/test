@@ -1,6 +1,7 @@
 import 'package:capstone_proj/providers/sign_up_provider.dart';
 import 'package:capstone_proj/screens/onboarding/BasicInfoScreen.dart';
 import 'package:capstone_proj/widgets/ProgressBar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
@@ -76,18 +77,29 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
       // 현재 로그인된 사용자 (이메일 인증을 통해 로그인됨)
       User? user = _auth.currentUser;
 
-      // 전화번호 인증 후 기존 계정에 연결
-      await user?.linkWithCredential(credential);
+      if (user != null) {
+        // 전화번호 인증 후 기존 계정에 연결
+        await user.linkWithCredential(credential);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("전화번호 인증 성공!")),
-      );
+        // 🔹 Firestore의 step을 7로 업데이트
+        await FirebaseFirestore.instance
+            .collection('pending_users')
+            .doc(user.uid)
+            .update({
+          'step': 7, // 전화번호 인증 완료 후 step 7로 변경
+          'phoneVerifiedAt': FieldValue.serverTimestamp(),
+        });
 
-      // 인증 성공 시 BasicInfoScreen으로 이동
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => BasicInfoScreen()),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("전화번호 인증 성공!")),
+        );
+
+        // 인증 성공 시 BasicInfoScreen으로 이동
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => BasicInfoScreen()),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("전화번호 인증 실패: ${e.toString()}")),

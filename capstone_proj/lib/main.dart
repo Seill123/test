@@ -1,13 +1,11 @@
+import 'package:capstone_proj/AuthCheck.dart';
 import 'package:capstone_proj/providers/post_provider.dart';
-import 'package:capstone_proj/screens/main_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'package:capstone_proj/providers/sign_up_provider.dart';
-import 'package:capstone_proj/screens/onboarding/welcome_screen.dart';
 import 'package:capstone_proj/screens/onboarding/PhoneSignUpScreen.dart';
 import 'package:capstone_proj/controllers/search_controller.dart' as AppSearch;
 
@@ -63,43 +61,5 @@ class MyApp extends StatelessWidget {
         },
       ),
     );
-  }
-}
-
-// 로그인 상태를 확인하는 위젯
-class AuthCheck extends StatefulWidget {
-  @override
-  _AuthCheckState createState() => _AuthCheckState();
-}
-
-class _AuthCheckState extends State<AuthCheck> {
-  bool _isChecking = true; // 로딩 상태 추가
-  User? _user;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkAuthState(); // 로그인 상태 확인
-  }
-
-  void _checkAuthState() async {
-    FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (mounted) {
-        setState(() {
-          _user = user;
-          _isChecking = false; // 로딩 완료
-        });
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isChecking) {
-      return Center(child: CircularProgressIndicator()); // 🔹 초기 로딩 화면
-    }
-    return _user != null
-        ? MainScreen()
-        : WelcomeScreen(); // 🔹 로그인 여부에 따라 화면 전환
   }
 }

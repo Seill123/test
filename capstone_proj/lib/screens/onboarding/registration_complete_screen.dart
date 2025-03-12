@@ -1,5 +1,6 @@
 import 'package:capstone_proj/screens/main_screen.dart';
 import 'package:capstone_proj/providers/sign_up_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 
@@ -19,12 +20,21 @@ class _RegistrationCompleteScreenState
 
   Future<void> _registerUser() async {
     final signUpProvider = Provider.of<SignUpProvider>(context, listen: false);
+    final user = signUpProvider.getCurrentUser();
 
     try {
-      // Firestore에 저장
+      // Firestore에 사용자 데이터 저장
       await signUpProvider.saveToFirestore();
 
-      // 데이터 저장 성공 후 처리
+      // 가입 완료 후 `pending_users`에서 제거
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('pending_users')
+            .doc(user.uid)
+            .delete();
+      }
+
+      // 성공 메시지 출력
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("회원가입이 완료되었습니다!")),
       );

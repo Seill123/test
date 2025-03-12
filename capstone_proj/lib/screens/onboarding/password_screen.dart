@@ -1,6 +1,7 @@
 import 'package:capstone_proj/providers/sign_up_provider.dart';
 import 'package:capstone_proj/screens/onboarding/email_verification_Screen.dart';
 import 'package:capstone_proj/widgets/ProgressBar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_proj/screens/onboarding/signup_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -62,7 +63,7 @@ class _PasswordScreenState extends State<PasswordScreen> {
           Provider.of<SignUpProvider>(context, listen: false);
       signUpProvider.updateUserData(password: passwordController.text);
 
-      String email = signUpProvider.data.email; //Provider에서 이메일 가져오기
+      String email = signUpProvider.data.email; // Provider에서 이메일 가져오기
       String password = signUpProvider.data.password;
 
       FirebaseAuth auth = FirebaseAuth.instance;
@@ -72,25 +73,44 @@ class _PasswordScreenState extends State<PasswordScreen> {
       );
 
       User? user = userCredential.user;
-      if (user != null && !user.emailVerified) {
-        await user.sendEmailVerification();
+      if (user != null) {
+        // 🔹 Firestore에 step=4 저장 (pending_users 컬렉션)
+        await FirebaseFirestore.instance
+            .collection('pending_users')
+            .doc(user.uid)
+            .set({
+          'email': email,
+          'step': 4, // 현재 단계: 이메일 인증
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // 🔹 이메일 인증 링크 전송
+        if (!user.emailVerified) {
+          await user.sendEmailVerification();
+        }
       }
 
-      // 🔹 EmailVerificationScreen으로 이동
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => EmailVerificationScreen(),
-        ),
-      );
+      // 🔹 현재 위젯이 아직 활성화된 상태(mounted)인지 확인 후 화면 전환
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EmailVerificationScreen(),
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("이메일 인증 링크 전송 실패: ${e.toString()}")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("이메일 인증 링크 전송 실패: ${e.toString()}")),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false; // 로딩 상태 종료
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // 로딩 상태 종료
+        });
+      }
     }
   }
 
