@@ -1,6 +1,7 @@
 import 'package:capstone_proj/providers/sign_up_provider.dart';
 import 'package:capstone_proj/screens/onboarding/PhoneSignUpScreen.dart';
 import 'package:capstone_proj/widgets/ProgressBar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
@@ -41,6 +42,17 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
 
     if (isEmailVerified) {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('pending_users')
+            .doc(user.uid)
+            .update({
+          'step': 5, // 이메일 인증 완료 후 step 5로 업데이트
+          'emailVerifiedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => PhoneSignUpScreen()),
@@ -57,11 +69,32 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
+            icon: Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () async {
+              User? user = FirebaseAuth.instance.currentUser;
+
+              try {
+                if (user != null) {
+                  await user.reload();
+                  if (!user.emailVerified) {
+                    // 🔹 Firestore에서도 계정 삭제
+                    await FirebaseFirestore.instance
+                        .collection('pending_users')
+                        .doc(user.uid)
+                        .delete();
+                    await user.delete(); // Firebase Auth 계정 삭제
+                    await FirebaseAuth.instance.signOut(); // 로그아웃
+                    print('✅ 계정 및 Firestore 데이터 삭제 완료');
+                  } else {
+                    print('✅ 이미 인증된 계정, 삭제하지 않음');
+                  }
+                }
+              } catch (e) {
+                print('❌ 삭제 실패: $e');
+              }
+
+              Navigator.pop(context);
+            }),
         elevation: 0,
         backgroundColor: Colors.white,
       ),

@@ -12,6 +12,11 @@ class SignUpProvider extends ChangeNotifier {
   // UserData 객체를 외부에서 쉽게 접근할 수 있도록 하는 Getter
   UserData get data => userData;
 
+  // 현재 로그인된 사용자 반환
+  User? getCurrentUser() {
+    return _auth.currentUser;
+  }
+
   /// 사용자의 정보를 업데이트하는 메서드
   /// 각 필드는 선택적으로 업데이트 가능하며, 변경 사항이 있을 경우 notifyListeners()를 호출하여 UI 업데이트
   void updateUserData({
